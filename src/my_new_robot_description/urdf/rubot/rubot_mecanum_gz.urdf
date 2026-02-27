@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<robot name="rubot_mecanum">
+    <material name="yellow">
+        <color rgba="0.8 0.8 0.0 1.0"/>
+    </material>
+    <material name="black">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+    </material>
+    <material name="dark_grey">
+        <color rgba="0.2 0.2 0.2 1.0"/>
+    </material>
+    <material name="light_grey">
+        <color rgba="0.75 0.75 0.75 1.0"/>
+    </material>
+    <material name="green">
+        <color rgba="0.2 0.7 0.2 1.0"/>
+    </material>
+  <!-- ===== Frames base ===== -->
+  <link name="base_footprint"/>
+
+  <joint name="base_link_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <!-- Visual (per RViz) -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my_robot_description/meshes/rubot/base_link.stl"
+              scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="yellow"/>
+    </visual>
+
+    <!-- Collision (per costmaps si vols usar robot footprint/voxel amb robot model) -->
+    <collision>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.35 0.25 0.10"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- ===== Rodes (només visuals, fixed) ===== -->
+  <joint name="upper_left_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="upper_left_wheel"/>
+    <origin xyz="0.07 0.10 0.00" rpy="0 0 0"/>
+  </joint>
+  <link name="upper_left_wheel">
+    <visual>
+      <geometry>
+        <mesh filename="package://my_robot_description/meshes/rubot/upper_left_wheel.stl"
+              scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="light_grey"/>
+    </visual>
+  </link>
+
+  <joint name="lower_left_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lower_left_wheel"/>
+    <origin xyz="-0.085 0.10 0.00" rpy="0 0 0"/>
+  </joint>
+  <link name="lower_left_wheel">
+    <visual>
+      <geometry>
+        <mesh filename="package://my_robot_description/meshes/rubot/lower_left_wheel.stl"
+              scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="light_grey"/>
+    </visual>
+  </link>
+
+  <joint name="upper_right_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="upper_right_wheel"/>
+    <origin xyz="0.07 -0.10 0.00" rpy="0 0 3.14159"/>
+  </joint>
+  <link name="upper_right_wheel">
+    <visual>
+      <geometry>
+        <mesh filename="package://my_robot_description/meshes/rubot/upper_right_wheel.stl"
+              scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="light_grey"/>
+    </visual>
+  </link>
+
+  <joint name="lower_right_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lower_right_wheel"/>
+    <origin xyz="-0.085 -0.10 0.00" rpy="0 0 3.14159"/>
+  </joint>
+  <link name="lower_right_wheel">
+    <visual>
+      <geometry>
+        <mesh filename="package://my_robot_description/meshes/rubot/lower_right_wheel.stl"
+              scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="light_grey"/>
+    </visual>
+  </link>
+
+  <!-- ===== Lidar frame ===== -->
+  <joint name="base_scan_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_scan"/>
+    <origin xyz="0 0 0.14" rpy="0 0 0"/>
+  </joint>
+  <link name="base_scan">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my_robot_description/meshes/rubot/Lidar.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <!-- ===== Camera frame ===== -->
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera"/>
+    <origin xyz="0.13 0 0.08" rpy="0 0 0"/>
+  </joint>
+  <link name="camera">
+    <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <box size="0.025 0.05 0.025"/>
+        </geometry>
+        <material name="green"/>
+    </visual>
+  </link>
+
+</robot>

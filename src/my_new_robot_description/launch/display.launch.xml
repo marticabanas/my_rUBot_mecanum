@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="use_sim_time" default="false" description="Use /clock if true" />
+  <arg name="robot_model" default="rubot/rubot_mecanum.urdf" />
+
+  <let name="urdf_path" value="$(find-pkg-share my_new_robot_description)/urdf/$(var robot_model)" />
+  <let name="rviz_config_path" value="$(find-pkg-share my_new_robot_description)/rviz/urdf_config.rviz" />
+
+  <node pkg="robot_state_publisher" exec="robot_state_publisher">
+    <param name="robot_description" value="$(command 'xacro $(var urdf_path)')" />
+    <param name="use_sim_time" value="$(var use_sim_time)" />
+  </node>
+
+  <node pkg="joint_state_publisher_gui" exec="joint_state_publisher_gui">
+    <param name="use_sim_time" value="$(var use_sim_time)" />
+  </node>
+
+  <node pkg="rviz2" exec="rviz2" output="screen" args="-d $(var rviz_config_path)">
+    <param name="use_sim_time" value="$(var use_sim_time)" />
+  </node>
+</launch>
