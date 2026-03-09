@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
-
+from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy,QoSDurabilityPolicy
 
 class TwistLidarStop(Node):
     def __init__(self):
@@ -41,13 +41,22 @@ class TwistLidarStop(Node):
         # Publish at fixed rate
         self.timer = self.create_timer(0.05, self.timer_cb)
 
+
+
         # Lidar subscription
+        scan_qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=5,
+            durability=QoSDurabilityPolicy.VOLATILE
+        )
         self.scan_sub = self.create_subscription(
             LaserScan,
             "/scan",
             self.scan_cb,
-            10,
+            scan_qos,
         )
+        
 
         self.get_logger().info(
             f"Publishing /cmd_vel: vx={self.vx:.2f}, vy={self.vy:.2f}, w={self.w:.2f} | "
