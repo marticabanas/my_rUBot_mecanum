@@ -1,4 +1,4 @@
-# **3. ROS2 rUBot Mecanum Control**
+# **ROS2 rUBot Mecanum Control**
 
 The objectives of this chapter are:
 - control in virtual environment 
@@ -26,7 +26,7 @@ The final model represents the real robots we will use in the laboratory:
 - LIMO Doc: https://github.com/agilexrobotics/limo_pro_doc/blob/master/Limo%20Pro%20Ros2%20Foxy%20user%20manual(EN).md
 
 
-## **3.1. Robot performances**
+## **1. Robot performances**
 
 We will need to create a new package. This is already done, but if you want to do it from scratch:
 ```shell
@@ -101,9 +101,7 @@ ros2 launch my_robot_bringup my_robot_bringup_sw.launch.xml x0:=1.0 y0:=1.0 yaw0
 ![](./Images/03_Control/06_bringup_sw.png)
 
 - We will create now a first robot control python file "my_robot_control.py" to define a rubot movement with linear and angular speed during a time td
-- Because we will use parameters, review in the file:
-    - Declare Parametes
-    - Get Parameters
+
 - We have to add in "setup.py" the entry point corresponding to the created node and the executable name after compilation process
 
     ```python
@@ -115,16 +113,13 @@ ros2 launch my_robot_bringup my_robot_bringup_sw.launch.xml x0:=1.0 y0:=1.0 yaw0
     ```
 - Create "launch" folder
 - Install the launch and config folders modifying the "setup.py" file
-- Add dependency on the ros2launch package in "package.xml":
-    ```shell
-    <exec_depend>ros2launch</exec_depend>
-    ```
+
 - Create specific launch file "my_robot_control.launch.xml" or "my_robot_control.launch.py" to launch the node and python file created above
 - The parameter values can be updated:
     - In the node with the "declare parameter"
     - In the launch file with the parameter values
     - as arguments in command-line
-- Compile again and execute (I have changed the time duration as argument in command-line):
+- Compile again and execute:
     ```
     ros2 launch my_robot_control my_robot_control.launch.xml vx:=0.0 vy:=0.2 td:=5.0
     ```
@@ -144,51 +139,84 @@ The same simple control program created in virtual environment to move the robot
     ```
 To properly control your real rUBot, we have a very usefull Lidar sensor to detect obstacles and avoid collisions.
 
-**Activity: Lidar test**
+### **1.3. Lidar sensor**
 
 The LIDAR sensor we are using in our rUBot mecanum robot is a RPLIDAR A1 with the following specifications:
 - angle_min: -3.141593 (rad)
 - angle_max: 3.141593 (rad)
 - angle_increment: 0.008727 (rad)  -> 720 laser beams
 
-- Verify if the Lidar model you have specified in `rubot_mecanum.urdf` file has the same speciffications as the real one. Modify it if necessary.
-- Bringup the corrected rUBot mecanum model:
+![](./Images/02_rubot_model/02_lidar.png)
+
+- Verify if the Lidar model you have specified in `rubot_mecanum.urdf` file has the same speciffications. Modify it if necessary.
+- Bringup the rUBot mecanum model:
     ```shell
-    ros2 launch my_robot_bringup my_robot_bringup_sw.launch.xml x0:=1.0 y0:=-0.5 yaw0:=0.0 robot:=rubot/rubot_mecanum.urdf custom_world:=square3m_walls.world
+    ros2 launch my_robot_bringup my_robot_bringup_sw.launch.xml x0:=0.5 y0:=0.0 yaw0:=0.0 robot:=rubot/rubot_mecanum.urdf custom_world:=square3m_walls.world
     ````
-- A node is created to verify the Lidar readings:
+- A node is created to:
+    - move the robot with a custon Twist message
+    - Measure the minimum distance and angle to any obstacle around the robot
+    - If this minimum distance is lower than a threshold, the robot stops
     ````shell
     ros2 launch my_robot_control my_robot_lidar_test.launch.xml
     ````
-    - Are the Lidar readings correct?
-    - what do you think it could hapen?
+    > you can modify the parameter values in the node
 
-The objectives of this activity are:
-- Identify the Lidar specifications in the urdf file and correct it if necessary
-- Create a new `my_robot_lidar_test_rUBot.launch.xml` and `my_robot_lidar_test_rUBot.py` file to verify the proper Lidar readings
-- Launch the `my_robot_lidar_test_rUBot.launch.xml` file and show:
-    - The minimum distance and angle to a wall detected by the Lidar
-    - The distances at 0º, 90º and -90º with respect to the robot front
+The node delivered is usefull, but it has some important improvements:
+- Optimize the Quality of Servise for Lidar sensor
+    - Reliability:
+        - RELIABLE (Default): Ensures all messages are delivered
+        - BEST_EFFORT: Send data without guaranteeing delivery. Some messages may be lost.
+    - History:
+        - KEEP_LAST (Default): Keep only the last N messages
+        - KEEP_ALL
+    - Depth: Number of messages stored in the queue when using KEEP_LAST
+    - Durability: 
+        - VOLATILE (Default): Do not store messages
+        - TRANSIENT_LOCAL: store all messages for 
+                    late subscribers
+    - You have to add:
+    ````python
+    from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy,QoSDurabilityPolicy
+    ...
+    # Lidar subscription
+    scan_qos = QoSProfile(
+        reliability=QoSReliabilityPolicy.BEST_EFFORT,
+        history=QoSHistoryPolicy.KEEP_LAST,
+        depth=5,
+        durability=QoSDurabilityPolicy.VOLATILE
+    )
+    self.scan_sub = self.create_subscription(
+        LaserScan,
+        "/scan",
+        self.scan_cb,
+        scan_qos,
+    )
+    ````
+    - Subscriber cannot be more restrictive than the Publisher. 
+    - To see the QoS of a publisher:
+    ````bash
+    ros2 topic info /scan --verbose
+    ````
+    > Gazebo is usually RELIABLE, but the real Lidar is usually BEST_EFFORT!
 
-Upload a pdf file with a picture including:
-- Gazebo bringup where you can see the robot in a speciffic POSE in the world
-- terminal running the `my_robot_lidar_test_rUBot.launch.xml` with distances readings
+- Minimize the computational cost of Lidar callback:
+    - avoid arrays and find minimum directly
+    - avoid logs
 
 **Lab Session: rUBot control and Lidar test**
 
 The objectives of this lab session are:
-- Verify the proper Lidar readings in your rUBot mecanum robot in Gazebo simulation
-- Create a new `my_robot_control_lidar.launch.xml` and `my_robot_control_lidar.py` file to move the robot with a desired Twist message until a distance of 30cm in the movement direction to wall is detected
-- Launch the `my_robot_control_lidar.launch.xml` file and show:
-    - The robot moving until a the distance of 30cm to a wall is detected
-    - The distance and angle to a wall detected by the Lidar
+- Understand and verify the proper Lidar readings in your rUBot mecanum robot in Gazebo simulation
+- Create a new `my_robot_control_lidar.launch.xml` and `my_robot_control_lidar.py` file including the needed arguments
+- Optimize the code according to the suggested modifications
 - Verify first in Gazebo virtual environment and later with the real robot
 
 ## **2. Driving self-control using Lidar sensor**
 
 We will use now the created world to test the autonomous navigation with obstacle avoidance performance. 
 
-The algorithm description functionality, created in "my_robot_selfcontrol.py" file,is:
+The algorithm description functionality, created in "my_robot_selfcontrol.py" file, is:
 - The created node makes the robot go forward.
     - LIDAR is allways searching the closest distance and the angle
     - when this distance is lower than a threshold, the robot goes backward with angular speed in the oposite direction of the minimum distance angle.
@@ -207,8 +235,11 @@ ros2 launch my_robot_control my_robot_selfcontrol.launch.xml time_to_stop:=10.0
 
 **Activity: rUBot self-control**
 
-The objective of this activity is to modify the code to move the robot in Holonomic way, for exemple:
--  When the minimum distance is in the right side move the robot over the left side
+The objective of this activity is:
+- Optimize the code regarding the suggestions:
+    - Quality of Service
+    - Minimize the computational cost of Lidar callback
+- Modify the code to move the robot in Holonomic way, for exemple, when the minimum distance is in the right side move the robot over the left side
 
 Design the code using the Holonomic robot performances, and upload:
 - the file "my_robot_selfcontrol_holonomic.py"

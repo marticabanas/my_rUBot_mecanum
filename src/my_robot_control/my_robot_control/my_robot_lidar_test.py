@@ -1,80 +1,110 @@
+#!/usr/bin/env python3
+import math
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
-import math
+from geometry_msgs.msg import Twist
 
 
-class LidarTest(Node):
-
+class TwistLidarStop(Node):
     def __init__(self):
-        super().__init__('lidar_test_node')
+        super().__init__("twist_lidar_stop")
 
-        self.subscription = self.create_subscription(
+        # Parameters (match your launch)
+        self.declare_parameter("vx", 0.3)
+        self.declare_parameter("vy", 0.0)
+        self.declare_parameter("w", 0.0)
+        self.declare_parameter("stop_distance", 0.3)
+
+        # Optional: limit FOV for detection
+        self.declare_parameter("fov_min_deg", -150.0)
+        self.declare_parameter("fov_max_deg", 150.0)
+
+        self.vx = float(self.get_parameter("vx").value)
+        self.vy = float(self.get_parameter("vy").value)
+        self.w = float(self.get_parameter("w").value)
+        self.stop_distance = float(self.get_parameter("stop_distance").value)
+
+        self.fov_min_deg = float(self.get_parameter("fov_min_deg").value)
+        self.fov_max_deg = float(self.get_parameter("fov_max_deg").value)
+
+        self.cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+
+        self._moving_msg = Twist()
+        self._moving_msg.linear.x = self.vx
+        self._moving_msg.linear.y = self.vy
+        self._moving_msg.angular.z = self.w
+
+        self._stop_msg = Twist()  # all zeros
+        self._stopped = False
+
+        # Publish at fixed rate
+        self.timer = self.create_timer(0.05, self.timer_cb)
+
+        # Lidar subscription
+        self.scan_sub = self.create_subscription(
             LaserScan,
-            '/scan',
-            self.listener_callback,
-            10
+            "/scan",
+            self.scan_cb,
+            10,
         )
-        self.scan_msg_shown = False
-        self.last_print_time = self.get_clock().now().seconds_nanoseconds()[0]
 
-    def listener_callback(self, scan):
-        current_time = self.get_clock().now().seconds_nanoseconds()[0]
-        if current_time - self.last_print_time < 1:
-            return  # Skip printing if less than 1 second has passed
+        self.get_logger().info(
+            f"Publishing /cmd_vel: vx={self.vx:.2f}, vy={self.vy:.2f}, w={self.w:.2f} | "
+            f"stop_distance={self.stop_distance:.2f} m | FOV=[{self.fov_min_deg:.0f}°, {self.fov_max_deg:.0f}°]"
+        )
 
-        angle_min_deg = scan.angle_min * 180.0 / 3.14159
-        angle_max_deg = scan.angle_max * 180.0 / 3.14159
-        angle_increment_deg = scan.angle_increment * 180.0 / 3.14159
+    def timer_cb(self):
+        if self._stopped:
+            self.cmd_pub.publish(self._stop_msg)
+        else:
+            self.cmd_pub.publish(self._moving_msg)
 
-        # Indices for specific angles in rUBot (Lidar: -180deg to 180deg at 0.5deg/index)
-        index_0_deg = int((0 - angle_min_deg)/ angle_increment_deg)
-        index_neg90_deg = int((-90 - angle_min_deg) / angle_increment_deg)
-        index_pos90_deg = int((90 - angle_min_deg) / angle_increment_deg)
-        dist_0_deg = scan.ranges[index_0_deg]
-        dist_neg90_deg = scan.ranges[index_neg90_deg]
-        dist_pos90_deg = scan.ranges[index_pos90_deg]
-
-        self.get_logger().info("---- LIDAR readings ----")
-        self.get_logger().info(f"Number of scan points: {len(scan.ranges)}")
-        self.get_logger().info(f"Distance at 0º: {dist_0_deg:.2f} m" if dist_0_deg else "No valid reading at 0°")
-        self.get_logger().info(f"Distance at -90°: {dist_neg90_deg:.2f} m" if dist_neg90_deg else "No valid reading at -90°")
-        self.get_logger().info(f"Distance at +90°: {dist_pos90_deg:.2f} m" if dist_pos90_deg else "No valid reading at +90°")
-        self.get_logger().info(f"Distance at index 0: {scan.ranges[0]:.2f} m")
-        self.get_logger().info(f"Distance at index 100: {scan.ranges[100]:.2f} m")
-        self.get_logger().info(f"Distance at index 200: {scan.ranges[200]:.2f} m")
-        self.get_logger().info(f"Distance at index 400: {scan.ranges[400]:.2f} m")
-        self.get_logger().info(f"Distance at index 600: {scan.ranges[600]:.2f} m")
-        self.get_logger().info(f"Distance at index 700: {scan.ranges[700]:.2f} m")
-
-        custom_range = []
-        for i, distance in enumerate(scan.ranges):
-            # Angle on robot
-            angle_robot_deg =angle_min_deg + i * angle_increment_deg
-            if angle_robot_deg > 180.0:
-                angle_robot_deg -= 360.0
-            if not math.isfinite(distance) or distance <= 0.0:
-                continue
-            if distance < scan.range_min or distance > scan.range_max:
-                continue
-            if -150 < angle_robot_deg < 150:
-                custom_range.append((distance, angle_robot_deg))
-            else:
-                continue
-
-        if not custom_range:
+    def scan_cb(self, scan: LaserScan):
+        if self._stopped:
             return
-            
-        closest_distance, angle_closest_distance = min(custom_range)
-        
-        self.get_logger().info("---- LIDAR readings: Min distance ----")
-        self.get_logger().info(f"Minimum distance: {closest_distance:.2f} m at angle {angle_closest_distance:.2f}°")
 
-        self.last_print_time = current_time
+        angle_min_deg = math.degrees(scan.angle_min)
+        angle_inc_deg = math.degrees(scan.angle_increment)
+
+        candidates = []
+        for i, r in enumerate(scan.ranges):
+            if not math.isfinite(r) or r <= 0.0:
+                continue
+            if r < scan.range_min or r > scan.range_max:
+                continue
+
+            ang_deg = angle_min_deg + i * angle_inc_deg
+            # Normalize to [-180, 180)
+            ang_deg = (ang_deg + 180.0) % 360.0 - 180.0
+
+            if self.fov_min_deg <= ang_deg <= self.fov_max_deg:
+                candidates.append((r, ang_deg))
+
+        if not candidates:
+            return
+
+        closest_r, closest_ang = min(candidates, key=lambda x: x[0])
+
+        if closest_r < self.stop_distance:
+            self._stopped = True
+            self.get_logger().warn(
+                f"STOP: obstacle at {closest_r:.2f} m, angle {closest_ang:.0f}° "
+                f"(threshold {self.stop_distance:.2f} m)"
+            )
+
 
 def main(args=None):
     rclpy.init(args=args)
-    lidar1_test = LidarTest()
-    rclpy.spin(lidar1_test)
-    lidar1_test.destroy_node()
-    rclpy.shutdown()
+    node = TwistLidarStop()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()

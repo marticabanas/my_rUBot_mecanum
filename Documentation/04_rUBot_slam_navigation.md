@@ -53,7 +53,7 @@ These 3 packages are organized inside a `Navigation_Projects` subfolder on src f
 - Fist of all you have to bringup the robot in the desired environment at the desired initial position (0,0,0):
     - In the case of Virtual environment:
         ````shell
-        ros2 launch my_robot_bringup my_robot_bringup_sw.launch.xml x0:=0.0 y0:=0.0 yaw0:=0.0 robot:=rubot/rubot_mecanum.urdf custom_world:=square4m_sign.world
+        ros2 launch my_robot_bringup my_robot_bringup_sw.launch.xml x0:=0.5 y0:=-1.5 yaw0:=1.57 robot:=rubot/rubot_mecanum.urdf custom_world:=square4m_sign.world
         ````
         >Change the custom_world with the world name you have created
     - In the case of a real robot the bringup is already made when turned on the robot.

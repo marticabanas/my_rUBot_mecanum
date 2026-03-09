@@ -53,10 +53,10 @@ class RobotSelfControl(Node):
             self.get_logger().info(f"Vx: {self._msg.linear.x:.2f} m/s, w: {self._msg.angular.z:.2f} rad/s | Time: {elapsed_time:.1f}s")
             self._last_speed_time = now_sec
         if elapsed_time >= self._time_to_stop:
-            self.stop()
             self.timer.cancel()
+            self.stop()
             self.get_logger().info("Robot stopped")
-            rclpy.try_shutdown()
+            return
 
     def laser_callback(self, scan):
         if self._shutting_down:
@@ -128,10 +128,7 @@ class RobotSelfControl(Node):
     def stop(self):
         self._shutting_down = True
         stop_msg = Twist()
-        stop_msg.linear.x = 0.0
-        stop_msg.angular.z = 0.0
         self._cmdVel.publish(stop_msg)
-        rclpy.spin_once(self, timeout_sec=0.1)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -141,8 +138,13 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Safety: publish stop once on exit
+        try:
+            robot._cmdVel.publish(Twist())
+        except Exception:
+            pass
         robot.destroy_node()
-
-
+        if rclpy.ok():
+            rclpy.shutdown()
 if __name__ == '__main__':
-    main()
+    main()    

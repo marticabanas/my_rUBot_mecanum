@@ -58,9 +58,6 @@ class RobotController(Node):
             self.publisher.publish(Twist())  # Stop the robot
             self.timer.cancel()
             self.get_logger().info(f"Robot stopped")
-            #time.sleep(0.1) #add a small delay if needed to give time to finish the get_logger.
-            rclpy.try_shutdown() #shutdown the node better than rclpy.shutdown
-            #No more get_loggers are permitted
 
 def main():
     rclpy.init()
@@ -68,10 +65,6 @@ def main():
     try:
         rclpy.spin(rubot1_controller)
     except KeyboardInterrupt:
-        # ROS2 is already stopped and I can not execute any more functions
-        # if elapsed time is not reached, the robot will not stop
-        pass
-    finally:
         rubot1_controller.destroy_node()
 
 if __name__ == '__main__':

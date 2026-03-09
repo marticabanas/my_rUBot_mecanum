@@ -70,7 +70,8 @@ def generate_launch_description():
         launch_arguments={
             'map': map_path, # Passem la ruta completa que hem construït
             'use_sim_time': use_sim_time,
-            'params_file': params_path # Passem la ruta completa que hem construït
+            'params_file': params_path, # Passem la ruta completa que hem construït
+            'autostart': 'true'
         }.items(),
     )
 
