@@ -5,7 +5,7 @@
     <arg name="forward_speed"  default="0.2"/>
     <arg name="lateral_speed"  default="0.2"/>
     <arg name="time_to_stop"   default="30.0"/>
-
+    
     <node
         pkg="my_robot_control" exec="my_robot_selfcontrol_holonomic_exec" name="robot_selfcontrol_holonomic_node" output="screen">
             <param name="distance_limit" value="$(var distance_limit)"/>
