@@ -34,6 +34,17 @@ For this robot we will use a computero onboard based on Raspberrypi4 where we wi
   ````bash
   127.0.1.1 rubot06
   ````
+- Now if you connect the raspberrypi to a router with ethernet cable you will be able to connect with another computer with ssh protocol:
+  ````bash
+  ssh ubuntu@rubot06.local
+  ````
+- Using VScode with `Remote-SSH` extension:
+  ````xml
+  Host rUBot06_on_Ethernet
+    HostName rubot06.local
+    ForwardX11 yes
+    User ubuntu
+  ````
 
 ## Change Netplan configuration for Ethernet + Multiple WiFi
 
